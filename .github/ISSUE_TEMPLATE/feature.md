@@ -17,8 +17,5 @@ Why is this needed? (link to the PRD requirement, e.g. R3)
 ## Out of scope
 - 
 
-## Dependencies
-Depends on #
-
 ## SAA-C03 concepts
 - 
