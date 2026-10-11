@@ -9,8 +9,8 @@ const features = [
     description: "Add tasks in seconds. Nothing to configure.",
   },
   {
-    title: "Share the link",
-    description: "Anyone with the link can open the list.",
+    title: "Share with people",
+    description: "Invite others by email to view or edit your list.",
   },
   {
     title: "Finish together",
@@ -64,8 +64,8 @@ export default function Home() {
             Plan less. Finish more.
           </h1>
           <p className="m-0 max-w-[480px] text-base leading-6 text-text-secondary sm:mx-auto">
-            Make a to-do list, share it with a link, and check things off
-            together. No setup, no clutter.
+            Make a to-do list, share it with the people you plan with, and
+            check things off together. No setup, no clutter.
           </p>
         </div>
 

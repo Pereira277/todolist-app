@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 /*
- * Design tokens ported from design/v0.1/canvas/ds/todoui/tokens.json (ADR-0003).
- * Keep this file in sync by hand if the token source changes.
+ * Design tokens ported from the v0.1 design system exported from the UI
+ * mockups (kept outside the repository), see ADR-0003. Keep this file in
+ * sync by hand if the token source changes.
  */
 @theme {
   --color-background: #f7f7f4;
