@@ -23,6 +23,19 @@ flowchart LR
 | Logic | Lambda (Node 20/TS) | Pay-per-use, no servers |
 | Data | DynamoDB on-demand | Serverless, free tier, see ADR-0002 |
 
+### Hosting (live, v0.1)
+- Private S3 bucket (`todolist-frontend-lp2779`, us-east-1) holds the static export; Block
+  Public Access is on and it is never reachable directly, only through CloudFront.
+- CloudFront distribution (`d1sa68e9am4aht.cloudfront.net`) reads the bucket through an
+  Origin Access Control; the bucket policy grants `s3:GetObject` only to the CloudFront
+  service principal, scoped to this distribution's ARN.
+- A CloudFront Function (`todolist-index-rewrite`, `infra/cloudfront/index-rewrite.js`) runs
+  on viewer-request to append `index.html` to directory-style URIs, since CloudFront's
+  default root object only applies to `/`.
+- Custom error responses map 403 and 404 to `/404.html` with a 404 status — the Next.js
+  static export emits one HTML file per route (not a single SPA `index.html`), so unknown
+  paths are served the generated not-found page instead.
+
 ## Data model (draft, see ADR-0002)
 | Entity | PK | SK | Attributes |
 |--------|----|----|------------|
