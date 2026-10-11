@@ -22,6 +22,8 @@ Issue (GitHub Projects) → branch `type/n-slug` → PR with `Closes #n` → CI 
 ```bash
 # frontend
 cd frontend && npm install && npm run dev
+# static export (output goes to frontend/out)
+cd frontend && npm run build
 # backend (tests)
 cd backend && npm install && npm test
 ```
