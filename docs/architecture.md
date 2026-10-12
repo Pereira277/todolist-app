@@ -36,6 +36,24 @@ flowchart LR
   static export emits one HTML file per route (not a single SPA `index.html`), so unknown
   paths are served the generated not-found page instead.
 
+### Auth (live, v0.1)
+- Cognito User Pool `us-east-1_P1IpEKgOO` (Essentials plan): sign-in by email, required
+  `name` attribute, no MFA. App client `todolist-web` is a public SPA client (no secret)
+  with `ALLOW_USER_SRP_AUTH` and `ALLOW_REFRESH_TOKEN_AUTH`, token revocation and "prevent
+  user existence errors" on (see ADR-0004).
+- The frontend is a static export with no server, so `/sign-up`, `/confirm`, `/sign-in` and
+  the protected `/app` route run entirely client-side, calling Cognito through Amplify
+  Auth v6 (SRP). The User Pool ID and App Client ID come from
+  `NEXT_PUBLIC_COGNITO_USER_POOL_ID` / `NEXT_PUBLIC_COGNITO_CLIENT_ID` (`frontend/.env.local`,
+  not committed; see `frontend/.env.example`).
+- `/app` reads the signed-in user's attributes client-side on mount; if that call fails
+  (no valid session) it redirects to `/sign-in`. There is no server-side session check —
+  the "protection" is a client-side redirect, consistent with a fully static site.
+- Because "prevent user existence errors" is on, Cognito returns the same
+  `NotAuthorizedException` for both an unknown email and a wrong password; the sign-in page
+  shows one generic "incorrect email or password" message rather than revealing which case
+  occurred.
+
 ## Data model (draft, see ADR-0002)
 | Entity | PK | SK | Attributes |
 |--------|----|----|------------|
