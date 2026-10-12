@@ -3,18 +3,10 @@ import type {
   APIGatewayProxyStructuredResultV2,
 } from "aws-lambda";
 
-const allowedOrigin = process.env.ALLOWED_ORIGIN ?? "";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": allowedOrigin,
-  "Access-Control-Allow-Methods": "GET,OPTIONS",
-  "Access-Control-Allow-Headers": "Authorization,Content-Type",
-};
-
 function jsonResponse(statusCode: number, body: unknown): APIGatewayProxyStructuredResultV2 {
   return {
     statusCode,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   };
 }

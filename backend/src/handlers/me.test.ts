@@ -21,6 +21,7 @@ describe("GET /me handler", () => {
     const result = await handler(event);
 
     expect(result.statusCode).toBe(200);
+    expect(result.headers).toEqual({ "Content-Type": "application/json" });
     expect(JSON.parse(result.body as string)).toEqual({
       userId: "abc-123",
       email: "lucas@example.com",
