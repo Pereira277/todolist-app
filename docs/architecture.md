@@ -20,7 +20,7 @@ flowchart LR
 | Hosting | S3 + CloudFront (OAC) | Static, cheap, HTTPS, caching |
 | Auth | Cognito User Pool | Managed, free tier, issues JWTs |
 | API | API Gateway HTTP API | Cheaper than REST API, native JWT authorizer |
-| Logic | Lambda (Node 20/TS) | Pay-per-use, no servers |
+| Logic | Lambda (Node 24/TS) | Pay-per-use, no servers |
 | Data | DynamoDB on-demand | Serverless, free tier, see ADR-0002 |
 
 ### Hosting (live, v0.1)
