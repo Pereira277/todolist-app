@@ -49,13 +49,12 @@ export default function Home() {
             Todo
           </span>
         </Link>
-        {/* TODO(#4): point to the real sign-in route once Cognito auth lands */}
-        <a
-          href="#"
+        <Link
+          href="/sign-in/"
           className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline underline-offset-2 hover:text-primary-hover"
         >
           Sign in
-        </a>
+        </Link>
       </header>
 
       <main className="mx-auto flex w-full max-w-[1040px] flex-col items-stretch gap-8 px-4 pt-10 pb-16 sm:items-center sm:gap-12 sm:px-6 sm:pt-24">
@@ -70,20 +69,18 @@ export default function Home() {
         </div>
 
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-          {/* TODO(#4): point to the real sign-up route once Cognito auth lands */}
-          <a
-            href="#"
+          <Link
+            href="/sign-up/"
             className={`${buttonBase} w-full bg-primary text-on-primary hover:bg-primary-hover sm:w-auto`}
           >
             Create account
-          </a>
-          {/* TODO(#4): point to the real sign-in route once Cognito auth lands */}
-          <a
-            href="#"
+          </Link>
+          <Link
+            href="/sign-in/"
             className={`${buttonBase} w-full border-border-strong bg-surface text-text-primary hover:border-text-secondary hover:bg-background sm:w-auto`}
           >
             Sign in
-          </a>
+          </Link>
         </div>
 
         <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
