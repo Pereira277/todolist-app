@@ -1,0 +1,25 @@
+{
+  "name": "backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "build": "esbuild src/handlers/me.ts --bundle --platform=node --target=node24 --format=esm --outfile=dist/me.mjs",
+    "package": "npm run build && cd dist && zip -q me.zip me.mjs && cd ..",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.157",
+    "@types/node": "^24.19.2",
+    "esbuild": "^0.28.0",
+    "eslint": "^9.20.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.22.0",
+    "vitest": "^5.0.3"
+  }
+}
