@@ -42,9 +42,17 @@ The deploy job authenticates with short-lived credentials from `sts:AssumeRoleWi
 there are no long-lived keys to rotate or leak (see ADR-0005).
 
 1. **Identity provider:** `token.actions.githubusercontent.com`, audience `sts.amazonaws.com`.
-2. **Deploy role trust policy:** because the job runs in an environment, the token's `sub` claim
-   is `repo:<owner>/<repo>:environment:production` (not the `ref:refs/heads/main` form), so the
-   trust policy must match that value:
+2. **Deploy role trust policy:** it must match the token's `sub` claim exactly. Two things
+   shape that value:
+   - The job runs in an environment, so the claim ends in `:environment:production` (not the
+     `ref:refs/heads/main` form).
+   - The repository uses GitHub's immutable subject claims, so the owner and the repository
+     carry their numeric IDs: `repo:<owner>@<owner-id>/<repo>@<repo-id>`. A trust policy
+     written with the plain `repo:<owner>/<repo>` form is rejected. The IDs keep the trust
+     bound to this repository even if the owner or repository name is ever reused.
+
+   The exact prefix in use can be read with
+   `gh api repos/<owner>/<repo>/actions/oidc/customization/sub` (`sub_claim_prefix`).
    ```json
    {
      "Effect": "Allow",
@@ -53,7 +61,7 @@ there are no long-lived keys to rotate or leak (see ADR-0005).
      "Condition": {
        "StringEquals": {
          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-         "token.actions.githubusercontent.com:sub": "repo:<owner>/<repo>:environment:production"
+         "token.actions.githubusercontent.com:sub": "repo:<owner>@<owner-id>/<repo>@<repo-id>:environment:production"
        }
      }
    }
@@ -88,7 +96,9 @@ but can be pruned by hand (or with an S3 lifecycle rule later) if the bucket gro
    `gh run view <id> --log-failed`).
    - "Configure AWS credentials" fails with `Not authorized to perform
      sts:AssumeRoleWithWebIdentity`: the trust policy `sub` does not match, or `AWS_ROLE_ARN` is
-     wrong.
+     wrong. Compare the trust policy with the `sub_claim_prefix` returned by the command in
+     "AWS configuration" plus `:environment:production`; the usual cause is a policy written
+     without the numeric owner and repository IDs.
    - `AccessDenied` on a later step: the role is missing one of the permissions above.
    - "Smoke test" fails: the API did not answer 401 without a token; check the route, the
      authorizer and `NEXT_PUBLIC_API_URL`.

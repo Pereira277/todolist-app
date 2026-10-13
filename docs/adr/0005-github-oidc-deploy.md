@@ -20,7 +20,8 @@ must be scoped as tightly as the deploy itself.
    issues a signed OIDC token per job and AWS STS exchanges it for credentials that expire
    after the job (`sts:AssumeRoleWithWebIdentity`). The role's trust policy pins the token's
    `aud` to `sts.amazonaws.com` and its `sub` to
-   `repo:<owner>/<repo>:environment:production`. Cons: more moving parts to set up (identity
+   `repo:<owner>@<owner-id>/<repo>@<repo-id>:environment:production` (GitHub's immutable
+   subject format, which includes the numeric owner and repository IDs). Cons: more moving parts to set up (identity
    provider, trust policy, environment), and a mismatch in the `sub` condition fails with an
    opaque authorization error.
 3. **OIDC role trusted by branch (`ref:refs/heads/main`) instead of environment:** same
@@ -32,7 +33,9 @@ We chose **OIDC federation with a role trusted only by the `production` environm
 because it removes long-lived AWS credentials from GitHub entirely, at no cost. Binding the
 trust to the environment rather than the branch means only jobs that explicitly declare
 `environment: production` can obtain credentials, and GitHub environment rules (restrict to
-`main`, required reviewers) can gate deploys without touching IAM. The role's permissions
+`main`, required reviewers) can gate deploys without touching IAM. The trust uses the
+immutable subject format, so it stays bound to this exact repository even if the owner or
+repository name is later renamed and reused by someone else. The role's permissions
 are limited to what the deploy runs: write to the frontend bucket, invalidate the
 distribution and update the function code.
 
@@ -42,8 +45,10 @@ distribution and update the function code.
   the repository and workflow in the session context.
 - Negative / trade-offs: the identity provider and the role are two more clickops resources
   to track in the infra inventory until the Terraform migration; the deploy job must keep
-  `environment: production` and `id-token: write`, or the role assumption fails; deploys
-  depend on GitHub's OIDC endpoint being available.
+  `environment: production` and `id-token: write`, or the role assumption fails; the trust
+  policy must be written with the numeric IDs, since the plain `repo:<owner>/<repo>` form no
+  longer matches the token (this broke the first deploy); deploys depend on GitHub's OIDC
+  endpoint being available.
 - What needs revisiting, and when: when more environments appear (e.g. staging), add one role
   per environment rather than widening this trust policy; in v0.5 the provider, role and
   policies move to Terraform.
