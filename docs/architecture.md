@@ -96,6 +96,37 @@ sequenceDiagram
 - The API URL comes from `NEXT_PUBLIC_API_URL` (`frontend/.env.local`, not committed; see
   `frontend/.env.example`).
 
+## CI/CD (v0.1)
+```mermaid
+flowchart LR
+  PR[Pull request] --> CI[CI: lint, test, build]
+  CI -->|required check| M[Squash merge to main]
+  M --> D[Deploy workflow]
+  D -->|OIDC token| STS[AWS STS]
+  STS -->|short-lived credentials| D
+  D -->|update-function-code| L[Lambda todolist-me]
+  D -->|s3 sync| S3[(S3 bucket)]
+  D -->|create-invalidation| CF[CloudFront]
+  D -->|GET /me expects 401| API[API Gateway]
+```
+- **CI** (`.github/workflows/ci.yml`) runs on every pull request and on pushes to `main`, with
+  one job per package. It has no AWS access and builds the frontend with placeholder
+  configuration.
+- **Deploy** (`.github/workflows/deploy.yml`) runs on pushes to `main`, in the `production`
+  environment, one run at a time. It builds and tests everything first, then updates the
+  Lambda code, syncs the static export to S3, invalidates CloudFront and finally checks that
+  `GET /me` without a token still returns 401.
+- **No stored AWS keys (ADR-0005).** GitHub issues an OIDC token for the job and AWS STS exchanges it for
+  short-lived credentials of a deploy role whose trust policy only accepts this repository's
+  `production` environment. The role can only write to the frontend bucket, invalidate the
+  distribution and update the function code.
+- **Caching.** Hashed assets under `_next/static/` are uploaded as immutable for one year
+  and never deleted by a deploy, so tabs opened on the previous build keep working.
+  Everything else is `public,max-age=0,s-maxage=86400`: browsers always revalidate, CloudFront
+  keeps the object for a day, and the invalidation at the end of each deploy purges the edge.
+- Resource names, IDs and the role ARN come from GitHub Actions variables; see
+  [`docs/runbooks/ci-cd.md`](runbooks/ci-cd.md).
+
 ## Data model (draft, see ADR-0002)
 | Entity | PK | SK | Attributes |
 |--------|----|----|------------|

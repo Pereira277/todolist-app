@@ -18,7 +18,7 @@ Next.js (static) · S3 + CloudFront · Cognito · API Gateway · Lambda · Dynam
 | [Postmortems](docs/postmortems/) | Incidents and lessons learned |
 
 ## Workflow
-Issue (GitHub Projects) → branch `type/n-slug` → PR with `Closes #n` → CI → squash merge → deploy.
+Issue (GitHub Projects) → branch `type/n-slug` → PR with `Closes #n` → CI → squash merge → automatic deploy.
 
 ## Running locally
 ```bash
@@ -30,18 +30,29 @@ cd frontend && npm run build
 cd backend && npm install && npm test
 ```
 
-## Deploying (manual)
-Infrastructure is clickops in v0.1–v0.4 (see ADR-0001); the frontend and the backend are
-deployed by hand until CI/CD lands.
+## Deploying
+Every push to `main` is deployed by GitHub Actions (`.github/workflows/deploy.yml`): it tests
+and builds both packages, updates the Lambda code, syncs the static export to S3, invalidates
+CloudFront and smoke tests the API. AWS access uses OIDC, so no access keys are stored in
+GitHub (see ADR-0005). Pull requests run lint, tests and build (`.github/workflows/ci.yml`). The expected
+variables and the AWS setup are in the [CI/CD runbook](docs/runbooks/ci-cd.md).
 
-### Frontend
+Infrastructure itself is still clickops in v0.1–v0.4 (see ADR-0001).
+
+### Manual fallback
+Only for when the pipeline is unavailable; the commands mirror what the workflow runs.
+
+#### Frontend
 ```bash
 cd frontend && npm run build
-aws s3 sync out/ s3://todolist-frontend-lp2779/ --delete
+aws s3 sync out/_next/static s3://todolist-frontend-lp2779/_next/static \
+  --cache-control "public,max-age=31536000,immutable"
+aws s3 sync out/ s3://todolist-frontend-lp2779/ --delete --exclude "_next/static/*" \
+  --cache-control "public,max-age=0,s-maxage=86400"
 aws cloudfront create-invalidation --distribution-id E13970XDCS5NZM --paths "/*"
 ```
 
-### Backend (Lambda)
+#### Backend (Lambda)
 `npm run package` bundles the handler with esbuild into `backend/dist/me.mjs` and zips it as
 `backend/dist/me.zip`; the zip is then uploaded to the `todolist-me` function. The HTTP API
 stage auto-deploys, so nothing has to be redeployed on the API Gateway side.
