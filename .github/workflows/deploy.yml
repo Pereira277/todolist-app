@@ -1,0 +1,102 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+# Deploys queue instead of cancelling: an interrupted run could leave the
+# bucket and the function on different commits
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            backend/package-lock.json
+
+      # Both artifacts are built before anything is uploaded, so a failing
+      # test or build never leaves a half-deployed release
+      - name: Test and package backend
+        working-directory: backend
+        run: |
+          npm ci
+          npm test
+          npm run package
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ vars.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
+          NEXT_PUBLIC_COGNITO_CLIENT_ID: ${{ vars.NEXT_PUBLIC_COGNITO_CLIENT_ID }}
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # The API goes first so the new frontend never calls an older backend
+      - name: Update Lambda code
+        working-directory: backend
+        env:
+          LAMBDA_FUNCTION_NAME: ${{ vars.LAMBDA_FUNCTION_NAME }}
+        run: |
+          aws lambda update-function-code \
+            --function-name "$LAMBDA_FUNCTION_NAME" \
+            --zip-file fileb://dist/me.zip \
+            --query LastUpdateStatus --output text
+          aws lambda wait function-updated --function-name "$LAMBDA_FUNCTION_NAME"
+
+      - name: Sync frontend to S3
+        working-directory: frontend
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+        run: |
+          # Hashed assets never change under the same name, so they can be cached
+          # forever. Old ones are kept on purpose: a tab opened before the deploy
+          # still requests the previous build's files
+          aws s3 sync out/_next/static "s3://$S3_BUCKET/_next/static" \
+            --cache-control "public,max-age=31536000,immutable"
+          # Everything else keeps a stable URL: browsers always revalidate, while
+          # CloudFront keeps it for a day and is purged by the invalidation below
+          aws s3 sync out/ "s3://$S3_BUCKET" --delete --exclude "_next/static/*" \
+            --cache-control "public,max-age=0,s-maxage=86400"
+
+      - name: Invalidate CloudFront
+        env:
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" --paths "/*" \
+            --query Invalidation.Id --output text
+
+      - name: Smoke test
+        env:
+          API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' "$API_URL/me")
+          if [ "$status" != "401" ]; then
+            echo "::error::GET /me without a token returned $status, expected 401"
+            exit 1
+          fi
