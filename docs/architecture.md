@@ -1,6 +1,26 @@
 # Architecture
 
-## Overview (MVP target, v0.3)
+## Overview (live, v0.1)
+
+```mermaid
+flowchart LR
+  U[User / Browser] --> CF[CloudFront]
+  CF -->|OAC| S3[(S3 - static Next.js)]
+  U -->|sign-in, SRP| COG[Cognito User Pool]
+  U -->|GET /me + ID token| APIGW[API Gateway HTTP API]
+  APIGW -->|JWT authorizer| COG
+  APIGW --> L[Lambda todolist-me]
+  L --> CW[CloudWatch Logs]
+  GH[GitHub Actions] -->|OIDC deploy role| S3
+  GH -->|OIDC deploy role| L
+  GH -->|invalidation| CF
+```
+
+Every box above is live and was created by hand in the console (ADR-0001); the full list is in
+the [infrastructure inventory](runbooks/infra-inventory.md). There is no database yet: `GET /me`
+only echoes the claims of the validated token.
+
+## Target (MVP, v0.3)
 
 ```mermaid
 flowchart LR
@@ -14,14 +34,19 @@ flowchart LR
   L --> CW[CloudWatch Logs/Metrics]
 ```
 
+v0.2 adds the DynamoDB table and the list and task handlers; v0.3 adds sharing on top of the
+same table.
+
 ## Components
-| Component | Service | Why |
-|-----------|---------|-----|
-| Hosting | S3 + CloudFront (OAC) | Static, cheap, HTTPS, caching |
-| Auth | Cognito User Pool | Managed, free tier, issues JWTs |
-| API | API Gateway HTTP API | Cheaper than REST API, native JWT authorizer |
-| Logic | Lambda (Node 24/TS) | Pay-per-use, no servers |
-| Data | DynamoDB on-demand | Serverless, free tier, see ADR-0002 |
+| Component | Service | Why | Status |
+|-----------|---------|-----|--------|
+| Hosting | S3 + CloudFront (OAC) | Static, cheap, HTTPS, caching | Live (v0.1) |
+| Auth | Cognito User Pool | Managed, free tier, issues JWTs | Live (v0.1) |
+| API | API Gateway HTTP API | Cheaper than REST API, native JWT authorizer | Live (v0.1) |
+| Logic | Lambda (Node 24/TS) | Pay-per-use, no servers | Live (v0.1), `GET /me` only |
+| CI/CD | GitHub Actions + OIDC | No stored AWS keys, see ADR-0005 | Live (v0.1) |
+| Cost guardrails | AWS Budgets + Cost Anomaly Detection | Email alerts before spend surprises | Live (v0.1) |
+| Data | DynamoDB on-demand | Serverless, free tier, see ADR-0002 | Planned (v0.2) |
 
 ### Hosting (live, v0.1)
 - Private S3 bucket (`todolist-frontend-lp2779`, us-east-1) holds the static export; Block
