@@ -4,6 +4,8 @@ A minimal todo app with list sharing between users, built as a hands-on study of
 
 **Live site:** https://d1sa68e9am4aht.cloudfront.net
 
+![Sign-in page of the v0.1 app](docs/images/app-v0.1.png)
+
 ## Stack
 Next.js (static) · S3 + CloudFront · Cognito · API Gateway · Lambda · DynamoDB · GitHub Actions
 
