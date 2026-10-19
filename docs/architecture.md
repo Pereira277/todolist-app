@@ -4,32 +4,36 @@
 
 ```mermaid
 flowchart LR
-  U[User / Browser] --> CF[CloudFront]
+  U[User / Browser] -->|1. load app| CF[CloudFront]
   CF -->|OAC| S3[(S3 - static Next.js)]
-  U -->|sign-in, SRP| COG[Cognito User Pool]
-  U -->|GET /me + ID token| APIGW[API Gateway HTTP API]
-  APIGW -->|JWT authorizer| COG
-  APIGW --> L[Lambda todolist-me]
+  U -->|2. sign-in, SRP| COG[Cognito User Pool]
+  COG -.->|ID token| U
+  U -->|3. GET /me + ID token| APIGW[API Gateway HTTP API]
+  APIGW -.->|verify JWT signature via cached JWKS| COG
+  APIGW -->|validated claims| L[Lambda todolist-me]
   L --> CW[CloudWatch Logs]
-  GH[GitHub Actions] -->|OIDC deploy role| S3
-  GH -->|OIDC deploy role| L
-  GH -->|invalidation| CF
 ```
+
+Dashed arrows are responses or signing-key reads, not calls made on every request: API
+Gateway fetches the User Pool's JWKS once and validates each token locally against the cached
+keys.
 
 Every box above is live and was created by hand in the console (ADR-0001); the full list is in
 the [infrastructure inventory](runbooks/infra-inventory.md). There is no database yet: `GET /me`
-only echoes the claims of the validated token.
+only echoes the claims of the validated token. The deploy path has its own diagram in
+[CI/CD](#cicd-v01).
 
 ## Target (MVP, v0.3)
 
 ```mermaid
 flowchart LR
-  U[User / Browser] --> CF[CloudFront]
-  CF --> S3[(S3 - static Next.js)]
-  U -->|sign-in| COG[Cognito User Pool]
-  U -->|JWT| APIGW[API Gateway HTTP API]
-  APIGW -->|JWT authorizer| COG
-  APIGW --> L[Lambda handlers]
+  U[User / Browser] -->|1. load app| CF[CloudFront]
+  CF -->|OAC| S3[(S3 - static Next.js)]
+  U -->|2. sign-in, SRP| COG[Cognito User Pool]
+  COG -.->|ID token| U
+  U -->|3. API call + ID token| APIGW[API Gateway HTTP API]
+  APIGW -.->|verify JWT signature via cached JWKS| COG
+  APIGW -->|validated claims| L[Lambda handlers]
   L --> DDB[(DynamoDB - single table)]
   L --> CW[CloudWatch Logs/Metrics]
 ```
