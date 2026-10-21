@@ -50,7 +50,7 @@ same table.
 | Logic | Lambda (Node 24/TS) | Pay-per-use, no servers | Live (v0.1), `GET /me` only |
 | CI/CD | GitHub Actions + OIDC | No stored AWS keys, see ADR-0005 | Live (v0.1) |
 | Cost guardrails | AWS Budgets + Cost Anomaly Detection | Email alerts before spend surprises | Live (v0.1) |
-| Data | DynamoDB, provisioned 5 RCU / 5 WCU | Serverless, free tier, see ADR-0002 | Planned (v0.2) |
+| Data | DynamoDB, provisioned 5 RCU / 5 WCU | Serverless, free tier, see ADR-0002 | Live (v0.2), table only |
 
 ### Hosting (live, v0.1)
 - Private S3 bucket (`todolist-frontend-lp2779`, us-east-1) holds the static export; Block
