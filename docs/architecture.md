@@ -50,7 +50,7 @@ same table.
 | Logic | Lambda (Node 24/TS) | Pay-per-use, no servers | Live (v0.1), `GET /me` only |
 | CI/CD | GitHub Actions + OIDC | No stored AWS keys, see ADR-0005 | Live (v0.1) |
 | Cost guardrails | AWS Budgets + Cost Anomaly Detection | Email alerts before spend surprises | Live (v0.1) |
-| Data | DynamoDB on-demand | Serverless, free tier, see ADR-0002 | Planned (v0.2) |
+| Data | DynamoDB, provisioned 5 RCU / 5 WCU | Serverless, free tier, see ADR-0002 | Live (v0.2), table only |
 
 ### Hosting (live, v0.1)
 - Private S3 bucket (`todolist-frontend-lp2779`, us-east-1) holds the static export; Block
@@ -156,16 +156,24 @@ flowchart LR
 - Resource names, IDs and the role ARN come from GitHub Actions variables; see
   [`docs/runbooks/ci-cd.md`](runbooks/ci-cd.md).
 
-## Data model (draft, see ADR-0002)
+## Data model (see ADR-0002)
+Table `todolist`: `PK` (String) + `SK` (String), provisioned 5 RCU / 5 WCU, no indexes.
+
 | Entity | PK | SK | Attributes |
 |--------|----|----|------------|
-| List | `LIST#<listId>` | `META` | name, ownerId, createdAt |
-| Task | `LIST#<listId>` | `TASK#<taskId>` | title, done, updatedAt |
-| Access | `USER#<userId>` | `LIST#<listId>` | role (owner/editor/viewer), listName |
+| List | `LIST#<listId>` | `META` | name, ownerId, taskCount, doneCount, createdAt, updatedAt |
+| Task | `LIST#<listId>` | `TASK#<taskId>` | title, done, createdAt, updatedAt |
+| Access | `USER#<userId>` | `LIST#<listId>` | role (owner, later editor/viewer), createdAt |
 
-- "My lists and shared with me" = `Query PK = USER#<userId>`
-- Open a list = `Query PK = LIST#<listId>`
-- Authorization: before any list operation, check for the `USER#<userId> / LIST#<listId>` item.
+- `userId` is the Cognito `sub`; list and task IDs are UUID v4 (ADR-0006).
+- My lists = `Query PK = USER#<userId>`, then `BatchGetItem` on the `META` items for name
+  and progress.
+- Open a list = `Query PK = LIST#<listId>` (`META` and all tasks).
+- Authorization: before any list operation, `GetItem USER#<userId> / LIST#<listId>`;
+  missing means 404.
+- Task create, delete and complete/uncomplete update the `META` counters in the same
+  `TransactWriteItems`. Rename is a single update on `META`.
+- List delete removes the access item first, then `META` and tasks in batches.
 
 ## Endpoints
 | Method | Route | Version |
