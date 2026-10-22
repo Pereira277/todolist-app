@@ -61,12 +61,17 @@ jobs:
         working-directory: backend
         env:
           LAMBDA_FUNCTION_NAME: ${{ vars.LAMBDA_FUNCTION_NAME }}
+          LISTS_FUNCTION_NAME: ${{ vars.LISTS_FUNCTION_NAME }}
         run: |
-          aws lambda update-function-code \
-            --function-name "$LAMBDA_FUNCTION_NAME" \
-            --zip-file fileb://dist/me.zip \
-            --query LastUpdateStatus --output text
-          aws lambda wait function-updated --function-name "$LAMBDA_FUNCTION_NAME"
+          deploy() {
+            aws lambda update-function-code \
+              --function-name "$1" \
+              --zip-file "fileb://dist/$2.zip" \
+              --query LastUpdateStatus --output text
+            aws lambda wait function-updated --function-name "$1"
+          }
+          deploy "$LAMBDA_FUNCTION_NAME" me
+          deploy "$LISTS_FUNCTION_NAME" lists
 
       - name: Sync frontend to S3
         working-directory: frontend
@@ -95,8 +100,10 @@ jobs:
         env:
           API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
         run: |
-          status=$(curl -s -o /dev/null -w '%{http_code}' "$API_URL/me")
-          if [ "$status" != "401" ]; then
-            echo "::error::GET /me without a token returned $status, expected 401"
-            exit 1
-          fi
+          for route in /me /lists; do
+            status=$(curl -s -o /dev/null -w '%{http_code}' "$API_URL$route")
+            if [ "$status" != "401" ]; then
+              echo "::error::GET $route without a token returned $status, expected 401"
+              exit 1
+            fi
+          done
