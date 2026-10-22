@@ -32,6 +32,14 @@ Identifiers:
 3. **Sequential counters:** short IDs, but they need an extra conditional write per create
    and make IDs guessable.
 
+AWS SDK:
+1. **Use the SDK v3 that ships with the `nodejs24.x` runtime:** smaller zip, but AWS updates
+   that copy on its own schedule, so the version in production is neither pinned nor the one
+   the tests ran against.
+2. **Bundle `@aws-sdk/client-dynamodb` and `@aws-sdk/lib-dynamodb` with esbuild:** a larger zip
+   (still well under the 50 MB limit), in exchange for a pinned version from
+   `package-lock.json`.
+
 ## Decision
 **One function per resource** and **UUID v4 from `crypto.randomUUID()`**.
 
@@ -43,6 +51,11 @@ Identifiers:
   its own zip. Shared code (DynamoDB client, access check, validation, responses) lives in
   `src/lib/` and is bundled into both.
 - `todolist-me` stays as it is.
+- The AWS SDK v3 clients are regular dependencies, **bundled into each zip** rather than taken
+  from the runtime, so production runs the exact version the tests ran against.
+- Handlers are unit tested against a mocked DynamoDB client with `aws-sdk-client-mock`
+  (dev dependency), which intercepts the SDK's `send` without network access or a local
+  DynamoDB.
 
 Two functions balance isolation against clickops effort. UUID v4 needs no dependency, and
 the only ordering we need (tasks by creation) is a sort in the handler over a partition we
@@ -57,6 +70,11 @@ already read in full.
     IAM much in v0.2.
   - Tasks are sorted in memory; fine while a list fits in one `Query` page (1 MB).
   - The deploy workflow must build and update three functions instead of one.
+  - Bundling the SDK grows each zip and slightly increases cold start; SDK updates arrive
+    through dependency bumps instead of runtime updates.
+  - esbuild must resolve the SDK's ESM builds (`--main-fields=module,main`): its CommonJS
+    builds fail inside an ESM bundle with `Dynamic require of "node:https" is not supported`,
+    which only shows up when the bundle is loaded, not in unit tests.
 - What needs revisiting, and when: if a list could exceed one `Query` page, switch task IDs to
   a sortable format or add pagination; sharing (v0.3) may add a `todolist-shares` function
   under the same rule.
