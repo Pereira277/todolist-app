@@ -173,14 +173,15 @@ Table `todolist`: `PK` (String) + `SK` (String), provisioned 5 RCU / 5 WCU, no i
   missing means 404.
 - Task create, delete and complete/uncomplete update the `META` counters in the same
   `TransactWriteItems`. Rename is a single update on `META`.
-- List delete removes the access item first, then `META` and tasks in batches.
+- List delete removes `META` first, then the tasks in batches, and the access item last,
+  so a failed delete can be retried.
 
 ## Endpoints
 | Method | Route | Version |
 |--------|-------|---------|
 | GET | /me | v0.1 (live) |
-| GET/POST | /lists | v0.2 |
-| PATCH/DELETE | /lists/{id} | v0.2 |
+| GET/POST | /lists | v0.2 (`todolist-lists`) |
+| PATCH/DELETE | /lists/{id} | v0.2 (`todolist-lists`) |
 | GET/POST | /lists/{id}/tasks | v0.2 |
 | PATCH/DELETE | /lists/{id}/tasks/{taskId} | v0.2 |
 | POST/DELETE | /lists/{id}/shares | v0.3 |
