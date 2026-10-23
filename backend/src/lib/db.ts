@@ -86,6 +86,21 @@ export function isThrottlingError(err: unknown): boolean {
   return false;
 }
 
+/**
+ * Tells whether a cancelled transaction failed the condition of one of its items.
+ *
+ * @param err - Error thrown by `TransactWriteItems`
+ * @param index - Position of the item in `TransactItems`
+ * @returns True when that item's condition check failed
+ */
+export function failedConditionAt(err: unknown, index: number): boolean {
+  if (!(err instanceof Error) || err.name !== "TransactionCanceledException") {
+    return false;
+  }
+  const reasons = (err as { CancellationReasons?: { Code?: string }[] }).CancellationReasons ?? [];
+  return reasons[index]?.Code === "ConditionalCheckFailed";
+}
+
 const BATCH_MAX_ATTEMPTS = 5;
 const BATCH_BASE_DELAY_MS = 50;
 
