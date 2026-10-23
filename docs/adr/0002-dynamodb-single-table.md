@@ -68,11 +68,13 @@ For the list name and progress shown in "My lists":
 3. **Check access:** `GetItem USER#<userId> / LIST#<listId>` before any list operation; a
    missing item returns 404, so the API never reveals whether a list exists.
 4. **Rename:** one `UpdateItem` on `META`. Nothing else holds the name.
-5. **Delete a list:** delete the access item first, so the list disappears and access is
-   revoked at once; then `Query` the list partition (keys only) and remove `META` and tasks
-   with `BatchWriteItem` in chunks of 25, retrying unprocessed items. It is not atomic: if it
-   fails midway, the remaining items are unreachable (no access item points to them) and the
-   delete is safe to retry.
+5. **Delete a list:** delete `META` first, which hides the list from "My lists" and makes
+   every task write fail its `attribute_exists` condition; then `Query` the list partition
+   (keys only) and remove the tasks with `BatchWriteItem` in chunks of 25, retrying
+   unprocessed items; delete the access item last. It is not atomic, but if it fails midway
+   the access item is still there, so the caller can retry the same `DELETE` and finish it.
+   (Deleting the access item first would make a failed delete unretryable and leave
+   orphaned tasks.)
 6. **Task writes:** create, delete and complete/uncomplete use `TransactWriteItems` with the
    task write plus an `ADD` on the `META` counters, so progress never drifts. The condition on
    `META` (`attribute_exists(PK)`) also rejects writes to a deleted list. Editing a title
