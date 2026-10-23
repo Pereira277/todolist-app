@@ -62,3 +62,4 @@ jobs:
         run: |
           node --input-type=module -e "await import('./dist/me.mjs')"
           node --input-type=module -e "await import('./dist/lists.mjs')"
+          node --input-type=module -e "await import('./dist/tasks.mjs')"

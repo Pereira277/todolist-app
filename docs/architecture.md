@@ -182,6 +182,6 @@ Table `todolist`: `PK` (String) + `SK` (String), provisioned 5 RCU / 5 WCU, no i
 | GET | /me | v0.1 (live) |
 | GET/POST | /lists | v0.2 (`todolist-lists`) |
 | PATCH/DELETE | /lists/{id} | v0.2 (`todolist-lists`) |
-| GET/POST | /lists/{id}/tasks | v0.2 |
-| PATCH/DELETE | /lists/{id}/tasks/{taskId} | v0.2 |
+| GET/POST | /lists/{id}/tasks | v0.2 (`todolist-tasks`) |
+| PATCH/DELETE | /lists/{id}/tasks/{taskId} | v0.2 (`todolist-tasks`) |
 | POST/DELETE | /lists/{id}/shares | v0.3 |

@@ -62,6 +62,7 @@ jobs:
         env:
           LAMBDA_FUNCTION_NAME: ${{ vars.LAMBDA_FUNCTION_NAME }}
           LISTS_FUNCTION_NAME: ${{ vars.LISTS_FUNCTION_NAME }}
+          TASKS_FUNCTION_NAME: ${{ vars.TASKS_FUNCTION_NAME }}
         run: |
           deploy() {
             aws lambda update-function-code \
@@ -72,6 +73,7 @@ jobs:
           }
           deploy "$LAMBDA_FUNCTION_NAME" me
           deploy "$LISTS_FUNCTION_NAME" lists
+          deploy "$TASKS_FUNCTION_NAME" tasks
 
       - name: Sync frontend to S3
         working-directory: frontend
@@ -100,7 +102,8 @@ jobs:
         env:
           API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
         run: |
-          for route in /me /lists; do
+          # The authorizer rejects these before any function runs, so any list ID will do
+          for route in /me /lists /lists/00000000-0000-0000-0000-000000000000/tasks; do
             status=$(curl -s -o /dev/null -w '%{http_code}' "$API_URL$route")
             if [ "$status" != "401" ]; then
               echo "::error::GET $route without a token returned $status, expected 401"
