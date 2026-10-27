@@ -53,7 +53,7 @@ People who split chores (couples, roommates, family) need a simple list that eve
 > Any item above only enters through a new ROADMAP version and an update to this PRD.
 
 ## 6. Non-functional requirements
-- **Cost:** up to USD 1/month at portfolio usage (free tier)
+- **Cost:** USD 0 at portfolio usage: everything stays within the free tier, and anything that would bill is off by default
 - **Availability (initial SLO from v0.5):** 99.5% successful API requests over 30 days
 - **Latency:** API p95 below 300 ms
 - **Security:** every API route authenticated (Cognito JWT); users can only access their own lists or lists shared with them

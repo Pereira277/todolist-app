@@ -8,7 +8,7 @@
 |------|---------|---------|------------------------|---------------|---------|
 | 2026-10-11 | AWS Budgets | todolist-budget | Monthly cost budget, USD 5, all services. Alerts by email: actual 20% (USD 1), actual 100% (USD 5), forecasted 100% | USD 0 | v0.1 |
 | 2026-10-11 | Cost Anomaly Detection | Default-Services-Monitor | Monitor type: AWS services | USD 0 | v0.1 |
-| 2026-10-11 | Cost Anomaly Detection | todolist-anomalies | Alert subscription, individual alerts, absolute impact > USD 1, email | USD 0 | v0.1 |
+| 2026-10-11 | Cost Anomaly Detection | Default-Services-Subscription | Alert subscription on `Default-Services-Monitor`, daily summary by email, absolute impact ≥ USD 1 with no percentage condition (corrected 2026-10-27: it had been left at ≥ USD 100 and ≥ 40%; individual alerts would need an SNS topic) | USD 0 | v0.1 |
 | 2026-10-11 | S3 | todolist-frontend-lp2779 | us-east-1, private, Block Public Access on, ACLs disabled (bucket owner enforced), SSE-S3, versioning off, tag `project=todolist` | USD 0 | v0.1 |
 | 2026-10-11 | CloudFront distribution | E13970XDCS5NZM (`d1sa68e9am4aht.cloudfront.net`) | S3 origin with OAC, redirect HTTP to HTTPS, managed cache policy CachingOptimized, default root object `index.html`, custom error responses 403/404 → `/404.html` (404), price class all, no WAF (Shield Standard only), tags `Name=todolist-frontend` and `project=todolist` | USD 0 | v0.1 |
 | 2026-10-11 | CloudFront Origin Access Control | E3LLRYMTQHWT6R (`oac-todolist-frontend-lp2779.s3.us-east-1.amazonaws.-mv4496hrnjl`) | Created by the S3-origin wizard for distribution E13970XDCS5NZM, SigV4, signing always | USD 0 | v0.1 |

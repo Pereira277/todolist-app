@@ -4,7 +4,7 @@ A minimal todo app with list sharing between users, built as a hands-on study of
 
 **Live site:** https://d1sa68e9am4aht.cloudfront.net
 
-![Sign-in page of the v0.1 app](docs/images/app-v0.1.png)
+![My lists screen of the v0.2 app, with two lists and their task progress](docs/images/app-v0.2.png)
 
 ## Stack
 Next.js (static) · S3 + CloudFront · Cognito · API Gateway · Lambda · DynamoDB · GitHub Actions
@@ -55,14 +55,20 @@ aws cloudfront create-invalidation --distribution-id E13970XDCS5NZM --paths "/*"
 ```
 
 #### Backend (Lambda)
-`npm run package` bundles the handler with esbuild into `backend/dist/me.mjs` and zips it as
-`backend/dist/me.zip`; the zip is then uploaded to the `todolist-me` function. The HTTP API
-stage auto-deploys, so nothing has to be redeployed on the API Gateway side.
+`npm run package` bundles each handler with esbuild into `backend/dist/<name>.mjs` and zips it
+as `backend/dist/<name>.zip` (`me`, `lists`, `tasks`); each zip is then uploaded to its
+`todolist-<name>` function. The HTTP API stage auto-deploys, so nothing has to be redeployed
+on the API Gateway side.
 ```bash
 cd backend && npm ci && npm test && npm run package
-aws lambda update-function-code --function-name todolist-me \
-  --zip-file fileb://dist/me.zip --region us-east-1
-aws lambda wait function-updated --function-name todolist-me --region us-east-1
-# smoke test: a request without a token must be rejected by the authorizer
-curl -i https://1vdohdj087.execute-api.us-east-1.amazonaws.com/me   # expect 401
+for name in me lists tasks; do
+  aws lambda update-function-code --function-name "todolist-$name" \
+    --zip-file "fileb://dist/$name.zip" --region us-east-1
+  aws lambda wait function-updated --function-name "todolist-$name" --region us-east-1
+done
+# smoke test: requests without a token must be rejected by the authorizer
+API=https://1vdohdj087.execute-api.us-east-1.amazonaws.com
+for route in /me /lists /lists/00000000-0000-0000-0000-000000000000/tasks; do
+  curl -s -o /dev/null -w "$route %{http_code}\n" "$API$route"   # expect 401
+done
 ```
