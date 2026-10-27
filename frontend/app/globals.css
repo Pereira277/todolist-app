@@ -55,3 +55,23 @@ body {
   color: var(--color-text-primary);
   font-family: var(--font-sans);
 }
+
+/* Skeleton shimmer from the design system; static for users who prefer reduced motion */
+@theme {
+  --animate-shimmer: shimmer 1400ms ease-in-out infinite;
+
+  @keyframes shimmer {
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: -100% 0;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-shimmer {
+    animation: none;
+  }
+}

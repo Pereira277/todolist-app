@@ -1,8 +1,8 @@
 "use client";
 
-import { InputHTMLAttributes } from "react";
+import { ComponentProps } from "react";
 
-type TextFieldProps = InputHTMLAttributes<HTMLInputElement> & {
+type TextFieldProps = ComponentProps<"input"> & {
   label: string;
   helperText?: string;
   error?: string;
