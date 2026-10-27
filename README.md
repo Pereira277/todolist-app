@@ -39,7 +39,7 @@ CloudFront and smoke tests the API. AWS access uses OIDC, so no access keys are 
 GitHub (see ADR-0005). Pull requests run lint, tests and build (`.github/workflows/ci.yml`). The expected
 variables and the AWS setup are in the [CI/CD runbook](docs/runbooks/ci-cd.md).
 
-Infrastructure itself is still clickops in v0.1–v0.4 (see ADR-0001).
+Infrastructure itself is still clickops in v0.1–v0.5 (see ADR-0001).
 
 ### Manual fallback
 Only for when the pipeline is unavailable; the commands mirror what the workflow runs.

@@ -50,8 +50,8 @@ distribution and update the function code.
   longer matches the token (this broke the first deploy); deploys depend on GitHub's OIDC
   endpoint being available.
 - What needs revisiting, and when: when more environments appear (e.g. staging), add one role
-  per environment rather than widening this trust policy; in v0.5 the provider, role and
-  policies move to Terraform.
+  per environment rather than widening this trust policy; in the Terraform migration (v0.6,
+  ADR-0001) the provider, role and policies move to Terraform.
 
 ## SAA-C03 relevance
 Design secure architectures: IAM roles versus IAM users, temporary credentials through STS,
