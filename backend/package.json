@@ -7,8 +7,8 @@
     "node": "24.x"
   },
   "scripts": {
-    "build": "esbuild src/handlers/me.ts src/handlers/lists.ts --bundle --platform=node --target=node24 --format=esm --main-fields=module,main --outdir=dist --out-extension:.js=.mjs",
-    "package": "npm run build && cd dist && rm -f *.zip && zip -q me.zip me.mjs && zip -q lists.zip lists.mjs && cd ..",
+    "build": "esbuild src/handlers/me.ts src/handlers/lists.ts src/handlers/tasks.ts --bundle --platform=node --target=node24 --format=esm --main-fields=module,main --outdir=dist --out-extension:.js=.mjs",
+    "package": "npm run build && cd dist && rm -f *.zip && zip -q me.zip me.mjs && zip -q lists.zip lists.mjs && zip -q tasks.zip tasks.mjs && cd ..",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "eslint ."

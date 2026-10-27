@@ -51,6 +51,10 @@ AWS SDK:
   its own zip. Shared code (DynamoDB client, access check, validation, responses) lives in
   `src/lib/` and is bundled into both.
 - `todolist-me` stays as it is.
+- **Ordering (added 2026-10-23):** both collections are returned newest first, sorted by
+  `createdAt` descending in the handler. `GET /lists` (My lists) shows the newest list on
+  top, and `GET /lists/{id}/tasks` shows the newest task first, right below the "Add a task"
+  field at the top of the List detail screen, so a new task appears where it was typed.
 - The AWS SDK v3 clients are regular dependencies, **bundled into each zip** rather than taken
   from the runtime, so production runs the exact version the tests ran against.
 - Handlers are unit tested against a mocked DynamoDB client with `aws-sdk-client-mock`
@@ -58,8 +62,8 @@ AWS SDK:
   DynamoDB.
 
 Two functions balance isolation against clickops effort. UUID v4 needs no dependency, and
-the only ordering we need (tasks by creation) is a sort in the handler over a partition we
-already read in full.
+the only ordering we need (newest first, by `createdAt`) is a sort in the handler over items
+we already read in full.
 
 ## Consequences
 - Positive: two more functions instead of eight; each resource deploys and fails on its own;

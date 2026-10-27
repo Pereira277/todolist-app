@@ -13,13 +13,13 @@ import { hasAccess } from "../lib/access.js";
 import {
   META_SK,
   db,
-  isThrottlingError,
   isUuid,
   listKey,
   tableName,
   userPk,
   withBatchRetries,
 } from "../lib/db.js";
+import { errorResponse } from "../lib/errors.js";
 import {
   emptyResponse,
   getUserId,
@@ -28,23 +28,8 @@ import {
   type ApiEvent,
   type ApiResult,
 } from "../lib/http.js";
+import { newestFirst, toList, type ListMetaItem } from "../lib/models.js";
 import { validateListName } from "../lib/validation.js";
-
-/** List as returned by the API */
-export interface List {
-  id: string;
-  name: string;
-  taskCount: number;
-  doneCount: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface ListMetaItem extends Omit<List, "id"> {
-  PK: string;
-  SK: string;
-  ownerId: string;
-}
 
 type Key = { PK: string; SK: string };
 
@@ -52,17 +37,6 @@ const BATCH_GET_LIMIT = 100;
 const BATCH_WRITE_LIMIT = 25;
 
 const notFound = (): ApiResult => jsonResponse(404, { message: "List not found." });
-
-function toList(item: ListMetaItem): List {
-  return {
-    id: item.PK.slice("LIST#".length),
-    name: item.name,
-    taskCount: item.taskCount,
-    doneCount: item.doneCount,
-    createdAt: item.createdAt,
-    updatedAt: item.updatedAt,
-  };
-}
 
 function chunk<T>(items: T[], size: number): T[][] {
   const chunks: T[][] = [];
@@ -129,9 +103,7 @@ async function listLists(userId: string): Promise<ApiResult> {
   const listIds = accessKeys.map((key) => key.SK.slice("LIST#".length));
   // A list being deleted loses its META first, so it simply drops out of the result
   const metas = await getListMetas(listIds);
-  const lists = metas
-    .map(toList)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const lists = metas.map(toList).sort(newestFirst);
   return jsonResponse(200, { lists });
 }
 
@@ -267,22 +239,6 @@ export async function handler(event: ApiEvent): Promise<ApiResult> {
         return jsonResponse(404, { message: "Not found." });
     }
   } catch (err) {
-    if (isThrottlingError(err)) {
-      console.warn(JSON.stringify({ level: "warn", message: "DynamoDB throttled", routeKey: event.routeKey }));
-      return jsonResponse(
-        503,
-        { message: "The service is busy. Try again in a moment." },
-        { "Retry-After": "1" }
-      );
-    }
-    console.error(
-      JSON.stringify({
-        level: "error",
-        message: "Unhandled error",
-        routeKey: event.routeKey,
-        error: err instanceof Error ? { name: err.name, message: err.message } : String(err),
-      })
-    );
-    return jsonResponse(500, { message: "Something went wrong." });
+    return errorResponse(err, event.routeKey);
   }
 }
