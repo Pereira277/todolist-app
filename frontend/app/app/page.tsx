@@ -1,19 +1,17 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
-import { fetchUserAttributes, signOut } from "aws-amplify/auth";
+import { DeleteListDialog } from "@/components/DeleteListDialog";
+import { ListNameDialog } from "@/components/ListNameDialog";
 import { TopBar } from "@/components/TopBar";
 import { Button } from "@/components/ui/Button";
-import { Dialog } from "@/components/ui/Dialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ListRow } from "@/components/ui/ListRow";
 import { SkeletonRow } from "@/components/ui/SkeletonRow";
-import { TextField } from "@/components/ui/TextField";
-import { ApiError, createList, deleteList, fetchLists, renameList, type List } from "@/lib/api";
+import { createList, deleteList, fetchLists, renameList, type List } from "@/lib/api";
+import { DELETE_LIST_ERROR, isNotFound, progressText, saveErrorMessage } from "@/lib/lists";
+import { useProfile } from "@/lib/useProfile";
 import { listNameError } from "@/lib/validate";
-
-type Profile = { name: string; email: string };
 
 type ListsState = { status: "loading" } | { status: "error" } | { status: "ready"; lists: List[] };
 
@@ -25,27 +23,10 @@ type DialogState =
 
 const SKELETON_ROWS = [0, 1, 2, 3];
 
-function progressOf(list: List) {
-  if (list.taskCount === 0) return "No tasks yet";
-  if (list.doneCount === list.taskCount) return `All ${list.taskCount} done`;
-  return `${list.doneCount} of ${list.taskCount} done`;
-}
-
-function deleteDescriptionOf(list: List) {
-  if (list.taskCount === 0) return undefined;
-  return `This also deletes its ${list.taskCount} ${list.taskCount === 1 ? "task" : "tasks"}.`;
-}
-
-// A 400 carries a message written for the user; anything else gets a generic one
-function saveErrorOf(err: unknown, fallback: string) {
-  return err instanceof ApiError && err.status === 400 ? err.message : fallback;
-}
-
 const menuTriggerId = (listId: string) => `list-actions-${listId}`;
 
 export default function MyListsPage() {
-  const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { profile, handleSignOut } = useProfile();
   const [listsState, setListsState] = useState<ListsState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
   const [dialog, setDialog] = useState<DialogState>({ kind: "none" });
@@ -73,16 +54,6 @@ export default function MyListsPage() {
   });
 
   useEffect(() => {
-    fetchUserAttributes()
-      .then((attrs) => {
-        setProfile({ name: attrs.name ?? "", email: attrs.email ?? "" });
-      })
-      .catch(() => {
-        router.replace("/sign-in/");
-      });
-  }, [router]);
-
-  useEffect(() => {
     let cancelled = false;
     fetchLists()
       .then((lists) => {
@@ -103,11 +74,6 @@ export default function MyListsPage() {
   function handleRetry() {
     setListsState({ status: "loading" });
     setAttempt((n) => n + 1);
-  }
-
-  async function handleSignOut() {
-    await signOut();
-    router.push("/");
   }
 
   function openCreate() {
@@ -155,7 +121,7 @@ export default function MyListsPage() {
       // Creating from the empty state removes the button that opened the dialog
       pendingFocus.current = () => headingRef.current;
     } catch (err) {
-      showNameError(saveErrorOf(err, "We couldn’t create the list. Try again."));
+      showNameError(saveErrorMessage(err, "We couldn’t create the list. Try again."));
     } finally {
       setSubmitting(false);
     }
@@ -182,14 +148,14 @@ export default function MyListsPage() {
       const saved = await renameList(list.id, name);
       updateLists((lists) => lists.map((l) => (l.id === list.id ? saved : l)));
     } catch (err) {
-      if (err instanceof ApiError && err.status === 404) {
+      if (isNotFound(err)) {
         updateLists((lists) => lists.filter((l) => l.id !== list.id));
         pendingFocus.current = () => headingRef.current;
         return;
       }
       updateLists((lists) => lists.map((l) => (l.id === list.id ? { ...l, name: list.name } : l)));
       setNameValue(name);
-      setNameError(saveErrorOf(err, "We couldn’t save the name. Try again."));
+      setNameError(saveErrorMessage(err, "We couldn’t save the name. Try again."));
       setDialog({ kind: "rename", list });
     } finally {
       setSavingId(undefined);
@@ -211,11 +177,11 @@ export default function MyListsPage() {
       removeDeleted(list.id);
     } catch (err) {
       // A 404 on the first attempt means the list was already gone
-      if (err instanceof ApiError && err.status === 404) {
+      if (isNotFound(err)) {
         removeDeleted(list.id);
         return;
       }
-      setDeleteError("We couldn’t delete the list. Check your connection and try again.");
+      setDeleteError(DELETE_LIST_ERROR);
     } finally {
       setSubmitting(false);
     }
@@ -281,7 +247,7 @@ export default function MyListsPage() {
               <li key={list.id} className="group/row">
                 <ListRow
                   name={list.name}
-                  meta={progressOf(list)}
+                  meta={progressText(list.taskCount, list.doneCount)}
                   href={`/app/list/?id=${encodeURIComponent(list.id)}`}
                   saving={savingId === list.id}
                   menuTriggerId={menuTriggerId(list.id)}
@@ -295,47 +261,26 @@ export default function MyListsPage() {
       </main>
 
       {(dialog.kind === "create" || dialog.kind === "rename") && (
-        <Dialog
-          asForm
-          title={dialog.kind === "create" ? "New list" : "Rename list"}
-          confirmLabel={dialog.kind === "create" ? "Create list" : "Save"}
-          loading={submitting}
-          loadingLabel={dialog.kind === "create" ? "Creating list" : "Saving name"}
+        <ListNameDialog
+          mode={dialog.kind}
+          value={nameValue}
+          error={nameError}
+          saving={submitting}
+          inputRef={nameInputRef}
+          onChange={handleNameChange}
           onConfirm={() => (dialog.kind === "create" ? handleCreate() : handleRename(dialog.list))}
           onCancel={closeDialog}
-        >
-          <TextField
-            ref={nameInputRef}
-            id="list-name"
-            label="Name"
-            placeholder={dialog.kind === "create" ? "e.g. Groceries" : undefined}
-            helperText="Up to 60 characters."
-            autoComplete="off"
-            value={nameValue}
-            onChange={handleNameChange}
-            readOnly={submitting}
-            error={nameError}
-          />
-        </Dialog>
+        />
       )}
 
       {dialog.kind === "delete" && (
-        <Dialog
-          destructive
-          title={`Delete ‘${dialog.list.name}’?`}
-          description={deleteDescriptionOf(dialog.list)}
-          confirmLabel="Delete list"
-          loading={submitting}
-          loadingLabel="Deleting list"
+        <DeleteListDialog
+          list={dialog.list}
+          deleting={submitting}
+          error={deleteError}
           onConfirm={() => handleDelete(dialog.list)}
           onCancel={closeDialog}
-        >
-          {deleteError && (
-            <p role="alert" className="m-0 text-sm text-error">
-              {deleteError}
-            </p>
-          )}
-        </Dialog>
+        />
       )}
     </div>
   );

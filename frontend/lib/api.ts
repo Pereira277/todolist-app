@@ -18,6 +18,15 @@ export type List = {
   updatedAt: string;
 };
 
+/** Task as returned by the API */
+export type Task = {
+  id: string;
+  title: string;
+  done: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 /** Non-2xx answer from the API, carrying the message from its JSON body when there is one */
 export class ApiError extends Error {
   constructor(
@@ -130,4 +139,63 @@ export async function deleteList(id: string): Promise<void> {
       await wait(delayMs);
     }
   }
+}
+
+/**
+ * Fetches a list and its tasks from GET /lists/{id}/tasks.
+ *
+ * @param listId - List id
+ * @returns The list and its tasks, newest first.
+ * @throws ApiError with status 404 when the list does not exist or the user has no access, or any other failure.
+ */
+export async function fetchListWithTasks(listId: string): Promise<{ list: List; tasks: Task[] }> {
+  const response = await request("GET", `/lists/${encodeURIComponent(listId)}/tasks`);
+  return response.json();
+}
+
+/**
+ * Adds a task with POST /lists/{id}/tasks.
+ *
+ * @param listId - List id
+ * @param title - Task title, already validated
+ * @returns The created task.
+ * @throws ApiError with the API message on 400, 404 when the list is gone, or any other failure.
+ */
+export async function createTask(listId: string, title: string): Promise<Task> {
+  const response = await request("POST", `/lists/${encodeURIComponent(listId)}/tasks`, { title });
+  return response.json();
+}
+
+/**
+ * Changes a task's title, done value or both with PATCH /lists/{id}/tasks/{taskId}.
+ *
+ * @param listId - List id
+ * @param taskId - Task id
+ * @param changes - New title and/or done value
+ * @returns The updated task.
+ * @throws ApiError with the API message on 400, 404 when the list or task is gone, or any other failure.
+ */
+export async function updateTask(
+  listId: string,
+  taskId: string,
+  changes: { title?: string; done?: boolean }
+): Promise<Task> {
+  const response = await request(
+    "PATCH",
+    `/lists/${encodeURIComponent(listId)}/tasks/${encodeURIComponent(taskId)}`,
+    changes
+  );
+  return response.json();
+}
+
+/**
+ * Deletes a task with DELETE /lists/{id}/tasks/{taskId}.
+ *
+ * @param listId - List id
+ * @param taskId - Task id
+ * @returns Resolves once the task is gone.
+ * @throws ApiError with status 404 when the list or task is gone, or any other failure.
+ */
+export async function deleteTask(listId: string, taskId: string): Promise<void> {
+  await request("DELETE", `/lists/${encodeURIComponent(listId)}/tasks/${encodeURIComponent(taskId)}`);
 }

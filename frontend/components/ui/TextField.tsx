@@ -20,7 +20,10 @@ export function TextField({
 
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      <label htmlFor={fieldId} className="text-sm font-medium text-text-primary">
+      <label
+        htmlFor={fieldId}
+        className={`text-sm font-medium ${props.disabled ? "text-text-disabled" : "text-text-primary"}`}
+      >
         {label}
       </label>
       <input

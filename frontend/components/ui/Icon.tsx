@@ -41,9 +41,23 @@ const paths: Record<IconName, ReactNode> = {
       <path d="M10 13.5h.01" />
     </>
   ),
+  tasks: (
+    <>
+      <rect x="3.5" y="3.5" width="13" height="13" rx="2.5" />
+      <path d="M7 10.2l2 2 4-4.4" />
+    </>
+  ),
+  question: (
+    <>
+      <circle cx="10" cy="10" r="7.25" />
+      <path d="M7.9 7.7a2.2 2.2 0 0 1 4.2.8c0 1.5-2.1 1.8-2.1 3.1" />
+      <path d="M10 14.2h.01" />
+    </>
+  ),
+  back: <path d="M12 5l-5 5 5 5" />,
 };
 
-export type IconName = "more" | "pencil" | "trash" | "list" | "error";
+export type IconName = "more" | "pencil" | "trash" | "list" | "error" | "tasks" | "question" | "back";
 
 type IconProps = {
   name: IconName;
