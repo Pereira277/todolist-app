@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { signIn } from "aws-amplify/auth";
+import { signIn, signOut } from "aws-amplify/auth";
 import { AuthCard } from "@/components/ui/AuthCard";
 import { AuthLayout } from "@/components/ui/AuthLayout";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { PasswordField } from "@/components/ui/PasswordField";
 import { TextField } from "@/components/ui/TextField";
+import { getSignedInProfile, useRedirectIfSignedIn } from "@/lib/session";
 import { INVALID_EMAIL_MESSAGE, isValidEmail } from "@/lib/validate";
 
 function isNetworkError(error: unknown) {
@@ -18,8 +19,28 @@ function isNetworkError(error: unknown) {
   return name === "NetworkError" || /network/i.test(message);
 }
 
+/**
+ * Signs in, first clearing a leftover session that Amplify still sees but that
+ * no longer yields valid tokens, so it cannot block the new sign-in.
+ *
+ * @param username - Email address
+ * @param password - Password
+ * @returns The Amplify sign-in result, or "signed-in" when a valid session already exists
+ */
+async function signInOverStaleSession(username: string, password: string) {
+  try {
+    return await signIn({ username, password });
+  } catch (error) {
+    if ((error as { name?: string })?.name !== "UserAlreadyAuthenticatedException") throw error;
+    if (await getSignedInProfile()) return "signed-in" as const;
+    await signOut();
+    return signIn({ username, password });
+  }
+}
+
 export default function SignInPage() {
   const router = useRouter();
+  const checkingSession = useRedirectIfSignedIn();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState<string>();
@@ -40,10 +61,13 @@ export default function SignInPage() {
 
     setLoading(true);
     try {
-      const { isSignedIn, nextStep } = await signIn({ username: email, password });
-      if (isSignedIn) {
+      const result = await signInOverStaleSession(email, password);
+      if (result === "signed-in") {
+        // Another tab may have signed in after this page loaded
+        router.replace("/app/");
+      } else if (result.isSignedIn) {
         router.push("/app/");
-      } else if (nextStep?.signInStep === "CONFIRM_SIGN_UP") {
+      } else if (result.nextStep?.signInStep === "CONFIRM_SIGN_UP") {
         router.push(`/confirm/?email=${encodeURIComponent(email)}`);
       }
     } catch (error) {
@@ -60,6 +84,10 @@ export default function SignInPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (checkingSession) {
+    return null;
   }
 
   return (
