@@ -11,7 +11,9 @@ One goal is learning AWS services for the SAA-C03. Creating resources through th
 2. **Clickops first, Terraform later:** learn the service first, then codify what is already understood.
 
 ## Decision
-Option 2. In versions v0.1–v0.4, infrastructure is created through the console and **every resource is recorded in `docs/runbooks/infra-inventory.md`**. In v0.5 everything moves to Terraform in a separate repository (`todolist-infra`), using `terraform import` where it makes sense.
+Option 2. In versions v0.1–v0.5, infrastructure is created through the console and **every resource is recorded in `docs/runbooks/infra-inventory.md`**. In v0.6 everything moves to Terraform in a separate repository (`todolist-infra`), using `terraform import` where it makes sense.
+
+> Updated 2026-10-27: versions renumbered when detailed tasks became v0.4. The migration was originally planned for v0.5.
 
 ## Consequences
 - Positive: deep understanding of each service; the migration becomes a real import exercise.

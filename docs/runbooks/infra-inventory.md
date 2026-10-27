@@ -1,6 +1,6 @@
 # Infrastructure inventory (clickops)
 
-> Every resource created manually in the console **must** be recorded here (ADR-0001). This is the baseline for the Terraform migration in v0.5.
+> Every resource created manually in the console **must** be recorded here (ADR-0001). This is the baseline for the Terraform migration in v0.6.
 
 **Default region:** us-east-1 (Budgets and Cost Anomaly Detection are global)
 
