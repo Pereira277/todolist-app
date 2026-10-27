@@ -9,6 +9,7 @@ import { AuthLayout } from "@/components/ui/AuthLayout";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
+import { useRedirectIfSignedIn } from "@/lib/session";
 
 const RESEND_COOLDOWN_SECONDS = 59;
 
@@ -22,14 +23,16 @@ function ConfirmEmailForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
+  // Confirming leads to sign-in, which a signed-in user does not need
+  const checkingSession = useRedirectIfSignedIn();
 
   useEffect(() => {
-    if (!email) {
+    if (!checkingSession && !email) {
       router.replace("/sign-up/");
     }
-  }, [email, router]);
+  }, [checkingSession, email, router]);
 
-  if (!email) {
+  if (checkingSession || !email) {
     return null;
   }
 

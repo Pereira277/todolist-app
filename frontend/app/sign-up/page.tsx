@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { PasswordField } from "@/components/ui/PasswordField";
 import { TextField } from "@/components/ui/TextField";
 import { INVALID_EMAIL_MESSAGE, isValidEmail } from "@/lib/validate";
+import { useRedirectIfSignedIn } from "@/lib/session";
 
 function isNetworkError(error: unknown) {
   const name = (error as { name?: string })?.name ?? "";
@@ -20,6 +21,8 @@ function isNetworkError(error: unknown) {
 
 export default function SignUpPage() {
   const router = useRouter();
+  // A second account created over an active session would end up signed in as the first one
+  const checkingSession = useRedirectIfSignedIn();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -57,6 +60,10 @@ export default function SignUpPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (checkingSession) {
+    return null;
   }
 
   return (
